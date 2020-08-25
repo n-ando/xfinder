@@ -11,7 +11,7 @@ xfinder はRaspberryPiやBeagleBoneなどのCPUボードに搭載されている
 Ethernetのインターフェースには48ビットの固有のアドレス(MAC (Media Access Control) アドレス)が割り振られており、その上位24ビットはベンダ(ネットワーク機器を開発する企業など)の固有のアドレスとなっています。Ethernetではパケットの送受信をするために相互にMACアドレスを知る必要があり、IPアドレスからMACアドレスを調べるためのARP(Address Resolution Protocol)と呼ばれるプロトコルが利用できます。
 xfinderでは、ネットワーク上に接続されている特定のMACアドレスのパターンを見つけることにより、RaspberryPiなどのヘッドレスシステムのIPアドレスを調べ、ssh等でログインし設定・開発を容易に行えるようにサポートします。
 
-<div style="text-align: center;"><img src="raspberrypi_and_arp.png" width="80%"></div>
+<div style="text-align: center;"><img src="raspberrypi_and_arp.png" width="600px"></div>
 <div style="text-align: center;">**xfinderでRaspberryPiを見つける**</div>
 
 
@@ -24,6 +24,9 @@ xfinder 以下の場所からダウンロードできます。
 
 | ''xfinder''(GitHub) | https://github.com/n-ando/xfinder |
 | ''xfinder''(バイナリ) | http://openrtm.org/pub/RaspberryPi/xfinder.exe |
+
+<div style="text-align: center;"><img src="xfinder_folder.png" width="600px"></div>
+<div style="text-align: center;">**ダウンロードした xfinder**</div>
 
 #ref(xfinder_folder.png,center)
 CENTER: ''ダウンロードした xfinder''
@@ -42,8 +45,8 @@ xfinderの使い方は以下の3ステップです。
 
 xfinder.exeを起動すると、以下の様な画面が表示されます。
 
-#ref(xfinder_gui_panes.png,center)
-CENTER: ''xfinder の GUI画面''
+<div style="text-align: center;"><img src="xfinder_gui_panes.png" width="600px"></div>
+<div style="text-align: center;">**xfinder の GUI画面**</div>
 
 まず、①左上のペインにてスキャンする条件（インターフェース、ボード、MACアドレスパターン等）を指定しスキャンを開始、②次にスキャンして見つかったRaspberryPi等のリストが表示されるので選択、③の左下のペインにてログイン条件を指定してターミナルアプリケーションを起動します。
 ターミナルアプリケーションが起動後は、対象となるRaspberryPiにログインして設定やプログラムの開発などを行うことができます。
