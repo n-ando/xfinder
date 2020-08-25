@@ -12,7 +12,7 @@ Ethernetのインターフェースには48ビットの固有のアドレス(MAC
 xfinderでは、ネットワーク上に接続されている特定のMACアドレスのパターンを見つけることにより、RaspberryPiなどのヘッドレスシステムのIPアドレスを調べ、ssh等でログインし設定・開発を容易に行えるようにサポートします。
 
 <div style="text-align: center;"><img src="raspberrypi_and_arp.png" width="600px"></div>
-<div style="text-align: center;">**xfinderでRaspberryPiを見つける**</div>
+<div style="text-align: center;"><b>xfinderでRaspberryPiを見つける</b></div>
 
 
 xfinderは一つの実行ファイルでコマンドラインツール (CUI モード) とグラフィカルユーザインターフェースツール (GUI モード) の2通りとして利用することができます。
@@ -35,18 +35,16 @@ CENTER: ''ダウンロードした xfinder''
 
 xfinderの使い方は以下の3ステップです。
 
-- ネットワークをスキャンしてRaspberryPi等を見つける
-- スキャンして見つかったRaspberryPiを確認する
-- TeraTerm等ターミナルソフトウエアでログインして作業をする
-
-
+1. ネットワークをスキャンしてRaspberryPi等を見つける
+1. スキャンして見つかったRaspberryPiを確認する
+1. TeraTerm等ターミナルソフトウエアでログインして作業をする
 
 ### 起動
 
 xfinder.exeを起動すると、以下の様な画面が表示されます。
 
 <div style="text-align: center;"><img src="xfinder_gui_panes.png" width="600px"></div>
-<div style="text-align: center;">**xfinder の GUI画面**</div>
+<div style="text-align: center;"><b>xfinder の GUI画面</b></div>
 
 まず、①左上のペインにてスキャンする条件（インターフェース、ボード、MACアドレスパターン等）を指定しスキャンを開始、②次にスキャンして見つかったRaspberryPi等のリストが表示されるので選択、③の左下のペインにてログイン条件を指定してターミナルアプリケーションを起動します。
 ターミナルアプリケーションが起動後は、対象となるRaspberryPiにログインして設定やプログラムの開発などを行うことができます。
@@ -62,8 +60,8 @@ xfinder.exeを起動すると、以下の様な画面が表示されます。
 
 現在のPCのどのネットワークインターフェースからRaspberryPiを探すかを選択します。複数のネットワークインターフェースがある場合、複数のIPアドレスが表示されるので、どのネットワーク(例えば、一つはグローバル側、もう一つがプライベート側のネットワークにつながっており、プライベート側のネットワークにあるRaspberryPiを探したい場合はここでプライベートアドレスを選択します。)をスキャンするかを選択します。
 
-#ref(xfinder_select_ifaddr.png,80%,center)
-CENTER: ''Interface addressでスキャンするネットワークインターフェースのIPアドレスを指定する''
+<div style="text-align: center;"><img src="xfinder_select_ifaddr.png" width="600px"></div>
+<div style="text-align: center;"><b>Interface addressでスキャンするネットワークインターフェースのIPアドレスを指定する</b></div>
 
 全てのネットワークインターフェースに対してスキャンを行う場合は''ALL''を選択してください。
 どのIPアドレスがどのネットワークインターフェースと対応しているかわからない場合は、''コントロールパネル''→''ネットワークとインターネット''→''ネットワークと共有センター''→''アダプターの設定の変更''からアダプタのアイコンをクリックしてどのようなIPアドレスが割り当てられているか確認してください。
@@ -75,8 +73,8 @@ CENTER: ''Interface addressでスキャンするネットワークインター�
 
 どのボードを探すかコンボボックスから選択します。RaspberryPiかBeagleBoneを選択でき、デフォルトではRaspberryPiが選択されています。
 
-#ref(xfinder_select_board.png,80%,center)
-CENTER: ''スキャンするボードタイプを指定する''
+<div style="text-align: center;"><img src="xfinder_select_board.png" width="600px"></div>
+<div style="text-align: center;"><b>スキャンするボードタイプを指定する</b></div>
 
 この一覧に探したいボードがない場合は、該当するボードのネットワークインターフェースのMACアドレスの上6ケタを調べ、次のMatch Patternのテキストボックスに入力しスキャンする必要があります。
 
@@ -102,9 +100,8 @@ CENTER: ''スキャンするMACアドレスのパターンを指定する''
 ''Abort''ボタンはスキャン実行中に途中でやめたい場合に押します。スキャン実行中のみ押すことができます。
 ボタンの下のプログレスバーはスキャンの進捗状況を表示します。
 
-#ref(xfinder_scanning_board.png,80%,center)
-CENTER: ''スキャン実行時''
-
+<div style="text-align: center;"><img src="xfinder_scanning_board.png" width="600px"></div>
+<div style="text-align: center;"><b>スキャン実行時</b></div>
 
 ### Found nodes
 
@@ -116,8 +113,8 @@ CENTER: ''スキャン実行時''
 
 なお、ここに表示されたリストをダブルクリックすると、左の ''Terminal launcher'' の設定に従ってターミナルアプリケーションが起動しログインできます。
 
-#ref(xfinder_launchterm_dclick.png,80%,center)
-CENTER: ''Found nodesから直接ターミナルアプリケーションを起動する''
+<div style="text-align: center;"><img src="xfinder_launchterm_dclick.png" width="600px"></div>
+<div style="text-align: center;"><b>Found nodesから直接ターミナルアプリケーションを起動する</b></div>
 
 ### Terminal launcher
 
@@ -135,10 +132,9 @@ CENTER: ''Found nodesから直接ターミナルアプリケーションを起�
 
 
 
-#ref(xfinder_launcterm_by_loginbutton.png,80%,center)
-CENTER: ''Loginボタンを押してターミナルアプリケーションを起動する''
+<div style="text-align: center;"><img src="xfinder_launcterm_by_loginbutton.png" width="600px"></div>
+<div style="text-align: center;"><b>Loginボタンを押してターミナルアプリケーションを起動する</b></div>
 
-#ref(launch_teraterm.png,80%,center)
-CENTER: ''起動したターミナルアプリケーション (TeraTerm Pro)''
-
+<div style="text-align: center;"><img src="launch_teraterm.png" width="600px"></div>
+<div style="text-align: center;"><b>起動したターミナルアプリケーション (TeraTerm Pro)</b></div>
 
