@@ -26,7 +26,7 @@ xfinder 以下の場所からダウンロードできます。
 | ''xfinder''(バイナリ) | http://openrtm.org/pub/RaspberryPi/xfinder.exe |
 
 <div style="text-align: center;"><img src="xfinder_folder.png" width="600px"></div>
-<div style="text-align: center;">**ダウンロードした xfinder**</div>
+<div style="text-align: center;"><b>ダウンロードした xfinder</b></div>
 
 #ref(xfinder_folder.png,center)
 CENTER: ''ダウンロードした xfinder''
