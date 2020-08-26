@@ -22,14 +22,11 @@ xfinderは一つの実行ファイルでコマンドラインツール (CUI モ�
 
 xfinder 以下の場所からダウンロードできます。
 
-| ''xfinder''(GitHub) | https://github.com/n-ando/xfinder |
-| ''xfinder''(バイナリ) | http://openrtm.org/pub/RaspberryPi/xfinder.exe |
+| ''xfinderバイナリ''(Windows) | [https://github.com/n-ando/xfinder/releases](https://github.com/n-ando/xfinder/releases) |
+| ''xfinderソースコード''       | [https://github.com/n-ando/xfinder](https://github.com/n-ando/xfinder) |
 
 <div style="text-align: center;"><img src="xfinder_folder.png" width="600px"></div>
 <div style="text-align: center;"><b>ダウンロードした xfinder</b></div>
-
-#ref(xfinder_folder.png,center)
-CENTER: ''ダウンロードした xfinder''
 
 ## xfinder (GUIモード) を使う
 
