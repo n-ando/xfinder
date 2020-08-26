@@ -3,7 +3,7 @@
 RaspberryPi はヘッドレス状態 (モニタ、キーボードを接続しない状態) ではIPアドレスなどを知る術がないため初期設定を行うのは少々困難です。
 最初にモニタとキーボードを接続して、ホスト名を設定し前述のようにAvahi経由でIPアドレスをホスト名から知ることも可能ですが、全く設定していないRaspberryPiについてはこの方法も使えません。
 
-
+<a id="anchor1"></a>
 ## xfinder とは
 
 xfinder はRaspberryPiやBeagleBoneなどのCPUボードに搭載されているEthernetインターフェースのMAC (Media Access Control) アドレスからIPアドレスを割出しログインするためのツールです。
@@ -18,6 +18,7 @@ xfinderでは、ネットワーク上に接続されている特定のMACアド�
 xfinderは一つの実行ファイルでコマンドラインツール (CUI モード) とグラフィカルユーザインターフェースツール (GUI モード) の2通りとして利用することができます。
 ここでは、GUIモードのxfinderの使い方について説明します。
 
+<a id="anchor2"></a>
 ## xfinderのダウンロード
 
 xfinder 以下の場所からダウンロードできます。
@@ -28,6 +29,7 @@ xfinder 以下の場所からダウンロードできます。
 <div style="text-align: center;"><img src="xfinder_folder.png" width="600px"></div>
 <div style="text-align: center;"><b>ダウンロードした xfinder</b></div>
 
+<a id="anchor3"></a>
 ## xfinder (GUIモード) を使う
 
 xfinderの使い方は以下の3ステップです。
@@ -36,6 +38,7 @@ xfinderの使い方は以下の3ステップです。
 1. スキャンして見つかったRaspberryPiを確認する
 1. TeraTerm等ターミナルソフトウエアでログインして作業をする
 
+<a id="anchor4"></a>
 ### xfinder の起動
 
 xfinder.exeを起動すると、以下の様な画面が表示されます。
@@ -48,11 +51,12 @@ xfinder.exeを起動すると、以下の様な画面が表示されます。
 
 なお、右のペインに表示されたボードのリストをダブルクリックすることでターミナルアプリケーションの起動とログインを行うことも可能です。
 
-
+<a id="anchor5"></a>
 ### Scan settings
 
 左上の ''Scan settings'' では、ネットワークをスキャンするための条件を設定します。
 
+<a id="anchor6"></a>
 #### Interface address
 
 現在のPCのどのネットワークインターフェースからRaspberryPiを探すかを選択します。複数のネットワークインターフェースがある場合、複数のIPアドレスが表示されるので、どのネットワーク(例えば、一つはグローバル側、もう一つがプライベート側のネットワークにつながっており、プライベート側のネットワークにあるRaspberryPiを探したい場合はここでプライベートアドレスを選択します。)をスキャンするかを選択します。
@@ -65,7 +69,7 @@ xfinder.exeを起動すると、以下の様な画面が表示されます。
 
 また、コマンドプロンプトを開いて ''ipconfig'' コマンドを実行しインターフェースと割り当てられているIPアドレスを確認することもできます。
 
-
+<a id="anchor7"></a>
 #### Board type
 
 どのボードを探すかコンボボックスから選択します。RaspberryPiかBeagleBoneを選択でき、デフォルトではRaspberryPiが選択されています。
@@ -78,7 +82,7 @@ xfinder.exeを起動すると、以下の様な画面が表示されます。
 RaspberryPiにUSB無線LANアダプタを付け、無線LANのみで接続している場合はここでRaspberryPiを選択しても探すことはできません。
 無線LANアダプタのMACアドレスのMACアドレスの上6ケタ (例えば Buffaroの場合10:6f:3f) をMatch Patternに入力して探します。
 
-
+<a id="anchor8"></a>
 #### Match pattern
 
 RaspberryPiやBeagleBone以外のボードを探す場合、ここに探したいMACアドレスのパターンを入力します。
@@ -90,7 +94,7 @@ CENTER: ''スキャンするMACアドレスのパターンを指定する''
 ただし、メジャーなメーカーの無線LANアダプタなどはスキャンすると多数発見されることもあります。
 
 
-
+<a id="anchor9"></a>
 #### Scanボタン/Abortボタン
 
 ''Scan'' ボタンはスキャンを実行する際に押します。スキャン中は押すことができません。
@@ -100,6 +104,7 @@ CENTER: ''スキャンするMACアドレスのパターンを指定する''
 <div style="text-align: center;"><img src="xfinder_scanning_board.png" width="600px"></div>
 <div style="text-align: center;"><b>スキャン実行時</b></div>
 
+<a id="anchor10"></a>
 ### Found nodes
 
 右側の ''Found nodes'' のペインはスキャンして見つかったボードのIPアドレス、MACアドレスおよびホスト名を表示します。
@@ -113,6 +118,7 @@ CENTER: ''スキャンするMACアドレスのパターンを指定する''
 <div style="text-align: center;"><img src="xfinder_launchterm_dclick.png" width="600px"></div>
 <div style="text-align: center;"><b>Found nodesから直接ターミナルアプリケーションを起動する</b></div>
 
+<a id="anchor11"></a>
 ### Terminal launcher
 
 左側の ''Terminal launcher'' のペインは見つかったホストに対してターミナルアプリケーションを利用してログインする際に使用します。
