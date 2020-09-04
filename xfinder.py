@@ -831,11 +831,34 @@ class PuTTY(Launcher):
         dprint("CMD: " + cmd_str)
         Popen(cmd_str, shell = True, startupinfo = startupinfo)
 
+#------------------------------------------------------------
+# Teraterm launcher
+#------------------------------------------------------------
+class TerminalApp(Launcher):
+    def __init__(self, cmd = "Terminal", appdir = "Terminal", path = None):
+        Launcher.__init__(self, cmd, appdir, path)
+
+    def is_available(self):
+        import platform
+        if platform.system() == "Darwin":
+            return True
+        return False
+
+    def invoke_cmd(self):
+        cmd_array = [self.cmd_path,
+                    self.host+':'+self.port,
+                    '/user='+self.user,
+                    '/passwd='+self.passwd]
+#        dprint("CMD: " + cmd_array)
+        Popen("open -a Terminal", shell = True)
+
 TERM_TYPES = {
     "TeraTerm": TeraTerm(),
     "Poderosa": Poderosa(),
-    "PuTTY"   : PuTTY()
+    "PuTTY"   : PuTTY(),
+    "TerminalApp": TerminalApp()
     }
+
 # end of Terminal Launcher
 #------------------------------------------------------------
 
@@ -845,7 +868,6 @@ class App(ttk.Frame):
     def __init__(self, master = None):
         ttk.Frame.__init__(self, master)
         # Member variables
-#        self.wm_iconbitmap(bitmap = "raspi128.ico")
         self.ifaddrs = []
         self.pattern = Tk.StringVar(value = "b8:27:eb:[a-f0-9:]*")
         self.board_types = []
@@ -1257,10 +1279,15 @@ def gui_main():
         root =Tk.Tk()
         App(root)
         root.title("xfinder")
-        try:
-            root.wm_iconbitmap(default = "raspi.ico")
-        except:
-            pass
+        import platform
+        pf = platform.system()
+        print(pf)
+        if pf == "Windows":
+            root.iconbitmap(bitmap = "icons/raspi.ico")
+        elif pf == "Darwin":
+            pass # Mac OS X never appear titlebar icon
+        else:
+            root.iconbitmap(bitmap = "icons/raspi.xbm")
         root.update()
         root.mainloop()
     except:
