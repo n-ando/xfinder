@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # @file xfinder
@@ -62,10 +62,13 @@ import sys
 import os
 import re
 import time
+import subprocess
 from subprocess import Popen, PIPE
 from threading import Thread
 
-MAX_THREAD = 20
+os.environ["TK_SILENCE_DEPRECATION"] = "1"
+
+MAX_THREAD = 32
 
 if os.name == 'nt':
     import subprocess
@@ -91,9 +94,9 @@ def get_interfaces_win32():
     while True:
         line  = p.stdout.readline()
         if not line: break
-        m = re.search("IPv4", line)
+        m = re.search("IPv4", str(line))
         if m:
-            m0 = re.search("(\d+\.){3}(\d+)", line)
+            m0 = re.search("(\d+\.){3}(\d+)", str(line))
             if m0: addr_list.append(m0.group())
     p.wait()
     return addr_list
@@ -108,12 +111,38 @@ def get_interfaces_unix():
     while True:
         line  = p.stdout.readline()
         if not line: break
-        m = re.search("inet addr", line)
+        m = re.search("inet addr", str(line))
         if m:
-            m0 = re.match(".*inet addr:([0-9\.]*)", line)
+            m0 = re.match(".*inet addr:([0-9\.]*)", str(line))
             if m0 and m0.group(1) != '127.0.0.1':
                 addr_list.append(m0.group(1))
     p.wait()
+    return addr_list
+
+#------------------------------------------------------------
+# get_interfaces_macos()
+# return: It returns IP address list of current host
+#------------------------------------------------------------
+def get_interfaces_macos():
+    try:
+        p = subprocess.Popen(['ifconfig', '-a'],
+            env=dict(os.environ, LC_ALL="C"),
+            encoding = 'UTF-8',
+            stdout = subprocess.PIPE)
+        addr_list = []
+        while True:
+            line  = p.stdout.readline()
+            if not line: break
+            m = re.search("inet ", str(line[:-1]))
+            if not m: continue
+            if m:
+                m0 = re.match(".*inet ([0-9\.]*)", str(line))
+                if m0 and m0.group(1) != '127.0.0.1':
+                    addr_list.append(m0.group(1))
+        p.wait()
+    except:
+        print("Unexpected error in get_interfaces_macos():",
+            sys.exc_info()[0])
     return addr_list
 
 #------------------------------------------------------------
@@ -124,11 +153,14 @@ def get_interfaces():
     import os
     import platform
     if os.name == 'posix':
-        return get_interfaces_unix()
+        if platform.system() == "Darwin":
+            return get_interfaces_macos()
+        else:
+            return get_interfaces_unix()
     elif os.name == 'nt':
         return get_interfaces_win32()
     else:
-        print "Unsupported OS"
+        print("Unsupported OS")
 #------------------------------------------------------------
 
 #============================================================
@@ -150,11 +182,11 @@ def get_netinfo_win32(ip_addr):
         line  = p.stdout.readline()
         if not line: break
 
-        m = re.search(ip_addr, line)
+        m = re.search(ip_addr, str(line))
         if m:
-            m0 = re.search("(\d+\.){3}(\d+)", p.stdout.readline())
+            m0 = re.search("(\d+\.){3}(\d+)", str(p.stdout.readline()))
             if m0: r["if_mask"] = m0.group()
-            m1 = re.search("(\d+\.){3}(\d+)", p.stdout.readline())
+            m1 = re.search("(\d+\.){3}(\d+)", str(p.stdout.readline()))
             if m1: r["if_gw"]   = m1.group()
     p.wait()
     return r
@@ -168,8 +200,35 @@ def get_netinfo_win32(ip_addr):
 #    "if_gw"  : Gateway of the interface
 #------------------------------------------------------------
 def get_netinfo_unix(ip_addr):
-    print "Not implemented"
+    print("Not implemented")
     return {}
+
+#------------------------------------------------------------
+# get_netinfo_macos(ip_addr)
+# ip_addr: An IP address of one of the current host.
+# return : It returns the following dictionary
+#    "if_addr": IP address of the interface. (the given IP address)
+#    "if_mask": Net mask of the interface
+#    "if_gw"  : Gateway of the interface
+#------------------------------------------------------------
+def get_netinfo_macos(ip_addr):
+    p = Popen('LC_ALL=C ifconfig -a', shell = True, stdout = PIPE)
+    r = {}
+    r["if_addr"] = ip_addr
+    while True:
+        line  = p.stdout.readline()
+        if not line: break
+        m = re.search(ip_addr, str(line))
+        if m:
+            m0 = re.search("netmask 0x([0-9a-f]{8})", str(line))
+            if m0:
+                hexmask = m0.group(1)
+                r["if_mask"]= '.'.join(
+                    [str(int(i,16)) for i in re.split('(..)',hexmask)[1::2]])
+            m1 = re.search("(\d+\.){3}(\d+)", str(p.stdout.readline()))
+            if m1: r["if_gw"]   = m1.group()
+    p.wait()
+    return r
 
 #------------------------------------------------------------
 # get_netinfo(ip_addr)
@@ -183,11 +242,14 @@ def get_netinfo(ip_addr):
     import os
     import platform
     if os.name == 'posix':
-        return get_netinfo_unix(ip_addr)
+        if platform.system() == "Darwin":
+            return get_netinfo_macos(ip_addr)
+        else:
+            return get_netinfo_unix(ip_addr)
     elif os.name == 'nt':
         return get_netinfo_win32(ip_addr)
     else:
-        print "Unsupported OS"
+        print("Unsupported OS")
 #
 #============================================================
 
@@ -205,14 +267,14 @@ def get_netinfo(ip_addr):
 def count_maskbit(mask_str):
     mask = mask_str.split(".")
     if len(mask) != 4:
-        print "Error: invalid mask", mask_str
+        print("Error: invalid mask", mask_str)
         sys.exit(1)
     count = 0
     bitnum_pre = 8
     for m in mask:
         bitnum = bin(int(m)).count('1')
         if bitnum > bitnum_pre:
-            print "Error: invalid mask", mask_str
+            print("Error: invalid mask", mask_str)
             sys.exit(1)
         count = count + bitnum
         bitnum_pre = bitnum
@@ -264,7 +326,7 @@ def get_addr_range(ip_addr):
     ip, mask = ip_addr.split("/")
     mask = int(mask)
     h = socket.inet_aton(ip)
-    bin_addr = socket.htonl(struct.unpack("L", h)[0])
+    bin_addr = socket.htonl(struct.unpack("I", h)[0])
     hex_to_sockaddr(bin_addr)
     bin_mask = 0b0
     for i in range(0, 32):
@@ -339,19 +401,15 @@ def get_macaddress_win32(host):
 # get_macaddress_unix()
 #------------------------------------------------------------
 def get_macaddress_unix(host):
-    pass
-#    import logging
-#    l = logging.getLogger("scapy.runtime")
-#    l.setLevel(49)
-#    
-#    alive, dead = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/
-#                      ARP(pdst = host),
-#                      timeout = 2, verbose = 0)
-#    if len(alive) != 1:
-#        print "Error, invalid returnvalue from srp()"
-#        sys.exit(1)
-#    print "MAC: ", alive[0][1].hwsrc
-#    return  alive[0][1].hwsrc
+    p = Popen("arp " + host, shell = True, stdout = PIPE)
+    while True:
+        line = p.stdout.readline()
+        if not line: break
+        m = re.search("(([0-9A-Fa-f]{1,2}[:-]){5}([0-9A-Fa-f]{1,2}))",
+                    str(line))
+        if m:
+            return m.group(0)
+    return ""
 
 def get_macaddress(host):
     import os
@@ -361,7 +419,7 @@ def get_macaddress(host):
     elif os.name == 'nt':
         return get_macaddress_win32(host)
     else:
-        print "Unsupported OS"
+        print("Unsupported OS")
 #------------------------------------------------------------
     
 
@@ -380,9 +438,10 @@ def get_macaddress(host):
 #------------------------------------------------------------
 class Pinger(object):
     running = True
-    def __init__(self, hosts, numthreads = 64, pattern = None, callback = None):
+    def __init__(self, hosts, numthreads = MAX_THREAD, pattern = None,
+                 callback = None):
         PingAgent.reset()
-        if numthreads > 64: numthreads = 64
+        if numthreads > MAX_THREAD: numthreads = MAX_THREAD
         PingAgent.set_max(len(hosts))
         Pinger.running = True
         for host in hosts:
@@ -437,20 +496,22 @@ class PingAgent(Thread):
         import os
         import platform
         if os.name == 'posix':
-            p = Popen('ping -c 1 ' + self.host, stdout=PIPE)
-            m = re.search("ttl", p.stdout.read())
+            p = subprocess.Popen("ping -t 1 -c 1 " +  self.host,
+                                shell = True,
+                                stdout=PIPE)
+            m = re.search("ttl", str(p.stdout.read()))
             p.wait()
         elif os.name == 'nt':
-            p = Popen('ping -n 1 ' + self.host, shell = True, stdout=PIPE,
+            p = subprocess.Popen(['ping', '-n', '1' , self.host], shell = True, stdout=PIPE,
                       startupinfo = startupinfo)
-            m = re.search("TTL", p.stdout.read())
+            m = re.search("TTL", str(p.stdout.read()))
             p.wait()
         else:
-            print "Unsupported OS"
+            print("Unsupported OS")
         if m:
             if self.pattern:
                 macaddr = get_macaddress(self.host)
-                pmatch = re.match(self.pattern, macaddr)
+                pmatch = re.match(self.pattern, str(macaddr))
                 if pmatch:
                     if self.callback:
                         self.callback(self.host, macaddr)
@@ -508,7 +569,7 @@ def get_beaglebones(host_ip, callback = None):
 # help()
 #------------------------------------------------------------
 def help():
-    print """
+    help_msg = """
 Usage:
   %s [OPTIONS]
 
@@ -523,10 +584,11 @@ Options:
 
   -t, --type=[BOARD_TYPE]  specify board type
                            available boad types are""" % (sys.argv[0])
+    print(help_msg)
     for n, t in BOARD_TYPES.items():
-        print "                      %s:" % (n)
-        print "                     ", t[0]
-    print """
+        print("                      %s:" % (n))
+        print("                     ", t[0])
+    htlp_msg = """
   -p, --pattern=[MAC_ADDR] specify MAC address pattern to be matched
                            ex. -p \"b8:27:eb:[a-f0-9:]*\"
 
@@ -542,6 +604,7 @@ Examples:
  finding VMware virtual host with MAC address 00:50:56.*
     $ %s -p \"00:50:56\"
 """ % (sys.argv[0], sys.argv[0], sys.argv[0])
+    print(help_msg)
 
 
 #------------------------------------------------------------
@@ -564,9 +627,9 @@ def check_ifaddr(host_ip, a):
         if ip.find(a) == 0: # head match only!!
             if host_ip.count(ip) == 0: host_ip.append(ip)
     if len(host_ip) == 0:
-        print a, "is not (or does not match) my IP address."
-        print "Available host IP addresses are:"
-        print curr_ifip
+        print(a, "is not (or does not match) my IP address.")
+        print("Available host IP addresses are:")
+        print(curr_ifip)
         sys.exit(0)
 
 def check_type(board_type, a):
@@ -583,7 +646,7 @@ def print_boards(boards):
             host_name = socket.gethostbyaddr(i)[0]
         except:
             host_name = ""
-        print "    ", i, "\t", m, "\t", host_name
+        print("    ", i, "\t", m, "\t", host_name)
 
 def cui_main():
     try:
@@ -591,7 +654,7 @@ def cui_main():
                                       'hi:t:p:',
                                       ['help', 'if=', 'type=', 'pattern='])
     except getopt.GetoptError:
-        print 'given options are not correct.'
+        print("given options are not correct.")
         sys.exit(-1)
     host_ip = []
     board_type = []
@@ -607,24 +670,24 @@ def cui_main():
         elif o == "-p" or o == "--pattern": pattern.append(a.lower()); continue
         # Unknown
         else:
-            print "Unknown option" # never come here
+            print("Unknown option") # never come here
             sys.exit(-1)
     try:
         if len(host_ip) == 0: host_ip = get_interfaces()
         for b in board_type:
-            print "Finding", b
+            print("Finding", b)
             for ip in host_ip:
                 boards = BOARD_TYPES[b][2](ip)
-                print ""
-                print len(boards), b, "found on", ip
+                print("")
+                print(len(boards), b, "found on", ip)
                 if len(boards) != 0:
                     print_boards(boards)
         for p in pattern:
-            print "Finding IPs with MAC address: ", p
+            print("Finding IPs with MAC address: ", p)
             for ip in host_ip:
                 boards = get_mac_matched_ip(ip, p)
-                print ""
-                print len(boards), "boards found on", ip
+                print("")
+                print(len(boards), "boards found on", ip)
                 if len(boards) != 0:
                     print_boards(boards)
         return 0
@@ -641,6 +704,7 @@ try:
     import tkFont
 except ImportError:
     import tkinter.ttk as ttk  # Python31+
+    import tkinter as Tk
     from tkinter.font import Font as tkFont
 
 class AsyncInvoker(Thread):
@@ -715,10 +779,12 @@ class TeraTerm(Launcher):
         Launcher.__init__(self, cmd, appdir, path)
 
     def invoke_cmd(self):
-        cmd_str = "\"%s\" %s:%s /user=\"%s\" /passwd=\"%s\"" \
-        % (self.cmd_path, self.host, self.port, self.user, self.passwd)
-        dprint("CMD: " + cmd_str)
-        Popen(cmd_str, shell = True, startupinfo = startupinfo)
+        cmd_array = [self.cmd_path,
+                    self.host+':'+self.port,
+                    '/user='+self.user,
+                    '/passwd='+self.passwd]
+        dprint("CMD: " + cmd_array)
+        Popen(cmd_array, shell = True, startupinfo = startupinfo)
 
 #------------------------------------------------------------
 # Poderosa launcher
@@ -794,7 +860,7 @@ class App(ttk.Frame):
         sty = ttk.Style()
         sty.configure('.', font = ('*', 12))
         self.option_add('*font', '* 12');
-        self.option_add('*LabelFrame.font', '* 12');#
+        self.option_add('*LabelFrame.font', '* 12');
         self.option_add('*Button.font', '* 12');
         self.option_add('*Entry.font', '* 12');
         self.label_width = 16
@@ -864,7 +930,7 @@ class App(ttk.Frame):
         self.w_btype = ttk.Combobox(w, values = types,
                                     width = self.entry_width,
                                     state = 'readonly')
-        self.w_btype.set(BOARD_TYPES.keys()[0])
+        self.w_btype.set(list(BOARD_TYPES.keys())[0])
         self.w_btype.grid(row = 1, column = 1, padx = 10, pady = 5)
         self.w_btype.bind('<<ComboboxSelected>>', self.select_types)
 
@@ -885,15 +951,19 @@ class App(ttk.Frame):
 
     # left top pane (4)
     def create_scan_button(self, w0):
+        import tkmacosx
         w = ttk.Frame(w0)
         w.grid(row = 3, column = 0, columnspan = 2, padx = 10, pady = 5)
-        self.w_scan = Tk.Button(w, text = "Scan",
+        self.w_scan = Tk.Button(w, text = 'Scan',
+                                highlightbackground="#ececec",
                                 width = self.label_width - 1, height = 1,
                                 pady = 5, padx = 5,
                                 command = self.do_scan)
         self.w_scan.grid(row = 0, column = 0, padx = 0, pady = 5,
                          sticky = Tk.W + Tk.E)
         self.w_abort = Tk.Button(w, text = "Abort",
+                                fg = "Black", bg = "Gray",
+                                highlightbackground="#ececec",
                                 width = self.label_width - 1, height = 1,
                                 pady = 5, padx = 5,
                                 command = self.do_abort)
@@ -958,8 +1028,9 @@ class App(ttk.Frame):
     # left bottom (3)
     def create_login_button(self, w):
         self.w_lbutton = Tk.Button(w, text = "Login",
-                                   width = 20, height = 1, pady = 5, padx = 5,
-                                   command = self.login)
+                                    highlightbackground="#ececec",
+                                    width = 20, height = 1, pady = 5, padx = 5,
+                                    command = self.login)
         self.w_lbutton["state"] = Tk.DISABLED
         self.w_lbutton.grid(row = len(self.login_infos) + 1,
                             column = 0, columnspan = 2,
@@ -1049,7 +1120,7 @@ class App(ttk.Frame):
             self.lvar["User name"].set(BOARD_TYPES["Raspberry"][1]["login"])
             self.lvar["Password"].set(BOARD_TYPES["Raspberry"][1]["passwd"])
             self.lvar["Port"].set(BOARD_TYPES["Raspberry"][1]["port"])
-        elif BOARD_TYPES.has_key(value):
+        elif value in BOARD_TYPES:
             self.board_types = [value]
             self.lvar["User name"].set(BOARD_TYPES[value][1]["login"])
             self.lvar["Password"].set(BOARD_TYPES[value][1]["passwd"])
@@ -1069,7 +1140,7 @@ class App(ttk.Frame):
         row_data = (ip_addr, mac_addr, host_name)
         self.tree.insert('', 'end', values = row_data)
         for idx, val in enumerate(row_data):
-            iwidth = tkFont.Font().measure(val)
+            iwidth = tkFont().measure(text = val)
             if self.tree.column(self.dataCols[idx], 'width') < iwidth:
                 self.tree.column(self.dataCols[idx], width = iwidth)
 
@@ -1124,7 +1195,7 @@ class App(ttk.Frame):
         elif self.scan_type.get() == "pattern":
             AsyncInvoker(self.scan_by_pattern).start()
         else:
-            print "Invalid scan type: ", self.scan_type.get()
+            print("Invalid scan type: ", self.scan_type.get())
 
     def do_abort(self, event = None):
         if self.scanning:
@@ -1171,13 +1242,18 @@ class App(ttk.Frame):
 #------------------------------------------------------------
 root = None
 def sigint_handler(signum, stack):
-    pass
+    global root
+    root.quit()
+    root.update()
+    root.destroy()
 
 def gui_main():
+    global root
     import signal
     try:
         PingAgent.verbose(False)
         signal.signal(signal.SIGINT, sigint_handler)
+        signal.signal(signal.SIGTERM, sigint_handler)
         root =Tk.Tk()
         App(root)
         root.title("xfinder")
@@ -1185,10 +1261,13 @@ def gui_main():
             root.wm_iconbitmap(default = "raspi.ico")
         except:
             pass
+        root.update()
         root.mainloop()
     except:
-        pass
-#        sys.exit(0)
+        print("Unexpected error in gui_main():",
+            sys.exc_info()[0])
+        raise
+    sys.exit(0)
 
 #------------------------------------------------------------
 # main function
