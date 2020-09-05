@@ -73,8 +73,8 @@ MAX_THREAD = 32
 if os.name == 'nt':
     import subprocess
     startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-    startupinfo.wShowWindow = subprocess._subprocess.SW_HIDE
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
 
 DEBUG = False
 def dprint(msg):
@@ -355,47 +355,16 @@ def get_addr_range(ip_addr):
 # get_macaddress_win32()
 #------------------------------------------------------------
 def get_macaddress_win32(host):
-    import ctypes
-    import socket
-    import struct
-    """ Returns the MAC address of a network host, requires >= WIN2K. """
-    # Check for api availability
-    try:
-        SendARP = ctypes.windll.Iphlpapi.SendARP
-    except:
-        raise NotImplementedError('Usage only on Windows 2000 and above')
-    # Doesn't work with loopbacks, but let's try and help.
-    if host == '127.0.0.1' or host.lower() == 'localhost':
-        host = socket.gethostname()
-    # gethostbyname blocks, so use it wisely.
-    try:
-        inetaddr = ctypes.windll.wsock32.inet_addr(host)
-        if inetaddr in (0, -1):
-            raise Exception
-    except:
-        hostip = socket.gethostbyname(host)
-        inetaddr = ctypes.windll.wsock32.inet_addr(hostip)
-    buffer = ctypes.c_buffer(6)
-    addlen = ctypes.c_ulong(ctypes.sizeof(buffer))
-    if SendARP(inetaddr, 0, ctypes.byref(buffer), ctypes.byref(addlen)) != 0:
-        # raise WindowsError('Retreival of mac address(%s) - failed' % host)
-        msg = 'Retreival of mac address(%s) - failed' % host
-        dprint(msg)
-        return ""
-    # Convert binary data into a string.
-    macaddr = ''
-    for intval in struct.unpack('BBBBBB', buffer):
-        if intval > 15:
-            replacestr = '0x'
-        else:
-            replacestr = 'x'
-        macaddr = ''.join([macaddr, hex(intval).replace(replacestr, '')])
-    return "%s:%s:%s:%s:%s:%s" % (macaddr.lower()[0:2],  \
-                                  macaddr.lower()[2:4],  \
-                                  macaddr.lower()[4:6],  \
-                                  macaddr.lower()[6:8],  \
-                                  macaddr.lower()[8:10], \
-                                  macaddr.lower()[10:12])
+    p = Popen("arp -a " + host, shell = True, stdout = PIPE)
+    while True:
+        line = p.stdout.readline()
+        if not line: break
+        m = re.search("(([0-9A-Fa-f]{1,2}[:-]){5}([0-9A-Fa-f]{1,2}))",
+                    str(line))
+        if m:
+            # Macaddress's delimiter is '-' on Win arp
+            return m.group(0).replace("-", ":")
+    return ""
 
 #------------------------------------------------------------
 # get_macaddress_unix()
@@ -500,19 +469,25 @@ class PingAgent(Thread):
                                 shell = True,
                                 stdout=PIPE)
             m = re.search("ttl", str(p.stdout.read()))
+            dprint("ping -t 1 -c 1 " +  self.host + "\n")
             p.wait()
         elif os.name == 'nt':
-            p = subprocess.Popen(['ping', '-n', '1' , self.host], shell = True, stdout=PIPE,
-                      startupinfo = startupinfo)
+            p = subprocess.Popen("ping -n 1 " + self.host,
+                                shell = True,
+                                stdout=PIPE,
+                                startupinfo = startupinfo)
             m = re.search("TTL", str(p.stdout.read()))
+            dprint("ping -n 1" + self.host + "\n")
             p.wait()
         else:
             print("Unsupported OS")
         if m:
             if self.pattern:
                 macaddr = get_macaddress(self.host)
+                dprint("MAC addr: " + macaddr + "\n")
                 pmatch = re.match(self.pattern, str(macaddr))
                 if pmatch:
+                    dprint("MAC address matched\n")
                     if self.callback:
                         self.callback(self.host, macaddr)
                     PingAgent.results[self.host] = macaddr
@@ -729,9 +704,16 @@ class Launcher:
                   "/usr/local/bin", "/bin",
                   "/opt/bin", "/opt/local/bin",
                   "/sbin", "/usr/sbin"]
+        self.macos_bin = ["/usr/bin", "/usr/sbin",
+                    "/usr/local/bin", "/usr/local/sbin",
+                    "/Applications/",
+                    "/Applications/Utilities/",
+                    "/System/Applications/",
+                    "/System/Applications/Utilities"]
         if path != None:
             self.win_bin.append(path)
             self.unix_bin.append(path)
+            self.macos_bin.append(path)
         self.cmd = cmd
         self.appdir = appdir
         self.path = path
@@ -741,20 +723,31 @@ class Launcher:
         self.finalize()
 
     def check_availability(self):
-        import os
-        if os.name == 'posix':    bin_path = self.unix_bin
-        elif os.name == 'nt':    bin_path = self.win_bin
-        else: sys.stderr.write("Unsupported OS\n")
-
+        import platform
+        dprint("check_availability => system(): " + platform.system() + "¥n")
+        if   platform.system() == 'Windows':
+            bin_path = self.win_bin
+        elif platform.system() == 'Darwin':
+            bin_path = self.macos_bin
+        elif platform.system() == 'Linux':
+            bin_path = self.posix
+        else: # other OS
+            sys.stderr.write("Unsupported OS\n")
+        dprint("bin_path: " + ' '.join(bin_path) + '¥n')
         for p in bin_path:
             path = p + '/' + self.appdir + '/' + self.cmd
             if os.path.exists(path):
                 self.cmd_path = path
+                dprint(self.cmd + "is available")
                 return True
+        dprint(self.cmd + "not available")
         return None
 
     def is_available(self):
-        if self.cmd_path == None: return False
+        if self.cmd_path == None:
+            dprint(self.cmd + " not available\n")
+            return False
+        dprint(self.cmd + " available\n")
         return True
 
     def invoke_cmd(self):
@@ -783,14 +776,15 @@ class TeraTerm(Launcher):
                     self.host+':'+self.port,
                     '/user='+self.user,
                     '/passwd='+self.passwd]
-        dprint("CMD: " + cmd_array)
+        dprint("TeraTerm CMD: " + ' '.join(cmd_array) + "\n")
         Popen(cmd_array, shell = True, startupinfo = startupinfo)
 
 #------------------------------------------------------------
 # Poderosa launcher
 #------------------------------------------------------------
 class Poderosa(Launcher):
-    def __init__(self, cmd = "poderosa.exe", appdir = "Poderosa", path = None):
+    def __init__(self, cmd = "poderosa.exe", appdir = "Poderosa Terminal 5",
+                path = None):
         Launcher.__init__(self, cmd, appdir, path)
         self.gts_file = None
 
@@ -806,12 +800,13 @@ class Poderosa(Launcher):
                            self.user, self.passwd)
         temp_dir = os.environ.get("TEMP")
         if temp_dir == None: temp_dir = "C:/"
-        self.gts_file = temp_dir + self.host + ".gts"
+        self.gts_file = temp_dir + "/" + self.host + ".gts"
+        dprint("Poderosa's gts file: " + self.gts_file + "\n")
         fd = open(self.gts_file, "w")
         fd.write(gts)
         fd.close()
         cmd_str = "\"%s\" -open \"%s\"" % (self.cmd_path, self.gts_file)
-        dprint("CMD: " + cmd_str)
+        dprint("Poderosa CMD: " + cmd_str + "\n")
         Popen(cmd_str, shell = True, startupinfo = startupinfo)
 
     def finalize(self):
@@ -828,35 +823,68 @@ class PuTTY(Launcher):
     def invoke_cmd(self):
         cmd_str = "\"%s\" -ssh %s@%s:%s -pw \"%s\"" \
         % (self.cmd_path, self.user, self.host, self.port, self.passwd)
-        dprint("CMD: " + cmd_str)
+        dprint("Putty CMD: " + cmd_str + "\n")
         Popen(cmd_str, shell = True, startupinfo = startupinfo)
 
 #------------------------------------------------------------
-# Teraterm launcher
+# Mac's generic Terminal App launcher
 #------------------------------------------------------------
-class TerminalApp(Launcher):
-    def __init__(self, cmd = "Terminal", appdir = "Terminal", path = None):
+class MacTermApp(Launcher):
+    def __init__(self, cmd = "Terminal.app", appdir = "", path = None):
         Launcher.__init__(self, cmd, appdir, path)
-
-    def is_available(self):
-        import platform
-        if platform.system() == "Darwin":
-            return True
-        return False
+        self.login_sh_file = None
 
     def invoke_cmd(self):
-        cmd_array = [self.cmd_path,
-                    self.host+':'+self.port,
-                    '/user='+self.user,
-                    '/passwd='+self.passwd]
-#        dprint("CMD: " + cmd_array)
-        Popen("open -a Terminal", shell = True)
+        # expect script for Terminal.app
+        login_sh = """#!/usr/bin/expect
+spawn ssh -p %s %s@%s
+match_max 100000
+expect "*?assword:*"
+send -- "%s\r"
+send -- "\r"
+interact
+""" % (self.port, self.user, self.host, self.passwd)
+        dprint("login shell script for Terminal.app\n")
+        dprint(login_sh + "\n")
+
+        # creating login script on TEMP dir
+        temp_dir = os.environ.get("TEMP")
+        if temp_dir == None: temp_dir = "/tmp"
+        self.login_sh_file = temp_dir + "/login_" + self.host + ".sh"
+        fd = open(self.login_sh_file, "w")
+        fd.write(login_sh)
+        fd.close()
+        dprint("Login script created: " + self.login_sh_file + "\n")
+        os.system("chmod 755 " + self.login_sh_file)
+        # launch Terminal.app
+        cmd = "/usr/bin/open -n -a " + self.cmd + " " + self.login_sh_file
+        Popen(cmd, shell = True)
+        dprint(cmd + "¥n")
+
+    def finalize(self):
+        if self.login_sh_file:
+            os.remove(self.login_sh_file)
+
+#------------------------------------------------------------
+# Mac's default Terminal.app launcher
+#------------------------------------------------------------
+class TerminalApp(MacTermApp):
+    def __init__(self, cmd = "Terminal.app", appdir = "", path = None):
+        MacTermApp.__init__(self, cmd, appdir, path)
+
+#------------------------------------------------------------
+# iTerm.app launcher
+#------------------------------------------------------------
+class iTermApp(MacTermApp):
+    def __init__(self, cmd = "iTerm.app", appdir = "", path = None):
+        MacTermApp.__init__(self, cmd, appdir, path)
 
 TERM_TYPES = {
     "TeraTerm": TeraTerm(),
     "Poderosa": Poderosa(),
     "PuTTY"   : PuTTY(),
-    "TerminalApp": TerminalApp()
+    "Terminal.app": TerminalApp(),
+    "iTerm.app": iTermApp()
     }
 
 # end of Terminal Launcher
@@ -948,7 +976,7 @@ class App(ttk.Frame):
         self.w_btype_radio.grid(row = 1, column = 0,
                                 padx = 10, pady = 5, sticky = Tk.W)
         # Combobox
-        types = BOARD_TYPES.keys()
+        types = list(BOARD_TYPES.keys())
         self.w_btype = ttk.Combobox(w, values = types,
                                     width = self.entry_width,
                                     state = 'readonly')
@@ -973,19 +1001,15 @@ class App(ttk.Frame):
 
     # left top pane (4)
     def create_scan_button(self, w0):
-        import tkmacosx
         w = ttk.Frame(w0)
         w.grid(row = 3, column = 0, columnspan = 2, padx = 10, pady = 5)
         self.w_scan = Tk.Button(w, text = 'Scan',
-                                highlightbackground="#ececec",
                                 width = self.label_width - 1, height = 1,
                                 pady = 5, padx = 5,
                                 command = self.do_scan)
         self.w_scan.grid(row = 0, column = 0, padx = 0, pady = 5,
                          sticky = Tk.W + Tk.E)
         self.w_abort = Tk.Button(w, text = "Abort",
-                                fg = "Black", bg = "Gray",
-                                highlightbackground="#ececec",
                                 width = self.label_width - 1, height = 1,
                                 pady = 5, padx = 5,
                                 command = self.do_abort)
@@ -1281,7 +1305,7 @@ def gui_main():
         root.title("xfinder")
         import platform
         pf = platform.system()
-        print(pf)
+        dprint("Platform type is: " + pf)
         if pf == "Windows":
             root.iconbitmap(bitmap = "icons/raspi.ico")
         elif pf == "Darwin":
