@@ -1,9 +1,27 @@
+#============================================================
+# Makefile to build xfiner.app
+#
+# @file xfinder
+# @brief Makefile for building xfinder.py's executable
+# @author Noriaki Ando <n-ando@aist.go.jp>
+# @copyright Copyright (C) 2020 Noriaki Ando, All right reserved.
+#
+# This Makefile generate xfinder.py's executable on MacOS X
+# How to use:
+# make       .... build xfiner.app (exe will be in the "dist")
+# make clean .... clean-up generated files
+#
+#============================================================
 all:
 	make `uname`
 
 Darwin:
-	pyinstaller xfinder.py --version 1.1 -onefile --noconsole --icon=icons/raspi.icns
+	pyinstaller xfinder.py --onefile --noconsole --icon=icons/raspi.icns
+	mkdir -p bin
+	cp dist/xfinder.app bin/
 
 clean:
-	pyinstaller --clean
-	rm -rf xfinder.spec .DS_store build dist __pycache__ *~ 
+	rm -f *~
+	rm -f .DS_store
+	rm -f xfinder.spec
+	rm -rf build dist __pycache__

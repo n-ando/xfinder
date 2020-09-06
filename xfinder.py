@@ -4,7 +4,7 @@
 # @file xfinder
 # @brief RaspberryPi/BeagleBone finder
 # @author Noriaki Ando <n-ando@aist.go.jp>
-# @copyright Copyright (C) 2014 Noriaki Ando, All right reserved.
+# @copyright Copyright (C) 2014-2020 Noriaki Ando, All right reserved.
 #
 # This tool helps to find RaspberryPi, BeagleBone or other head-less
 # cpu boards from specific MAC addresses.
@@ -68,13 +68,44 @@ from threading import Thread
 
 os.environ["TK_SILENCE_DEPRECATION"] = "1"
 
-MAX_THREAD = 32
+MAX_THREAD = 16
 
 if os.name == 'nt':
     import subprocess
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startupinfo.wShowWindow = subprocess.SW_HIDE
+if sys.platform == "win32":
+    import ctypes
+    ctypes.windll.kernel32.SetDllDirectoryA(None)
+
+
+#------------------------------------------------------------
+# popen_args(): stdin/out/err settings for Popen
+#
+# "pyinstaller --noconsole" on Windows requires stdin/out/err
+# strict redirection to avoid OSError
+#
+# https://github.com/pyinstaller/pyinstaller/wiki/Recipe-subprocess
+#------------------------------------------------------------
+def popen_args(include_stdout = True):
+    # The following is true only on Windows.
+    if hasattr(subprocess, 'STARTUPINFO'):
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        env = os.environ
+    else:
+        si = None
+        env = None
+    if include_stdout: # <= other Popen funcs
+        ret = {'stdout': subprocess.PIPE}
+    else: # <= Popen.check_output()
+        ret = {}
+    ret.update({'stdin': subprocess.PIPE,
+                'stderr': subprocess.PIPE,
+                'startupinfo': si,
+                'env': env })
+    return ret
 
 DEBUG = False
 def dprint(msg):
@@ -89,7 +120,7 @@ def dprint(msg):
 # return: It returns IP address list of current host
 #------------------------------------------------------------
 def get_interfaces_win32():
-    p = Popen('ipconfig', stdout = PIPE, startupinfo = startupinfo)
+    p = Popen('ipconfig', shell = True, **popen_args())
     addr_list = []
     while True:
         line  = p.stdout.readline()
@@ -106,7 +137,7 @@ def get_interfaces_win32():
 # return: It returns IP address list of current host
 #------------------------------------------------------------
 def get_interfaces_unix():
-    p = Popen('LC_ALL=C ifconfig -a', shell = True, stdout = PIPE)
+    p = Popen('LC_ALL=C ifconfig -a', shell = True, **popen_args(False))
     addr_list = []
     while True:
         line  = p.stdout.readline()
@@ -126,8 +157,9 @@ def get_interfaces_unix():
 def get_interfaces_macos():
     try:
         p = subprocess.Popen(['ifconfig', '-a'],
-            env=dict(os.environ, LC_ALL="C"),
+            env = dict(os.environ, LC_ALL="C"),
             encoding = 'UTF-8',
+            close_fds = True,
             stdout = subprocess.PIPE)
         addr_list = []
         while True:
@@ -175,7 +207,7 @@ def get_interfaces():
 #    "if_gw"  : Gateway of the interface
 #------------------------------------------------------------
 def get_netinfo_win32(ip_addr):
-    p = Popen('ipconfig', stdout = PIPE, startupinfo = startupinfo)
+    p = Popen('ipconfig', **popen_args())
     r = {}
     r["if_addr"] = ip_addr
     while True:
@@ -212,7 +244,7 @@ def get_netinfo_unix(ip_addr):
 #    "if_gw"  : Gateway of the interface
 #------------------------------------------------------------
 def get_netinfo_macos(ip_addr):
-    p = Popen('LC_ALL=C ifconfig -a', shell = True, stdout = PIPE)
+    p = Popen('LC_ALL=C ifconfig -a', shell = True, **popen_args())
     r = {}
     r["if_addr"] = ip_addr
     while True:
@@ -355,7 +387,7 @@ def get_addr_range(ip_addr):
 # get_macaddress_win32()
 #------------------------------------------------------------
 def get_macaddress_win32(host):
-    p = Popen("arp -a " + host, shell = True, stdout = PIPE)
+    p = Popen("arp -a " + host, shell = True, **popen_args())
     while True:
         line = p.stdout.readline()
         if not line: break
@@ -370,7 +402,7 @@ def get_macaddress_win32(host):
 # get_macaddress_unix()
 #------------------------------------------------------------
 def get_macaddress_unix(host):
-    p = Popen("arp " + host, shell = True, stdout = PIPE)
+    p = Popen("arp " + host, shell = True, **popen_args())
     while True:
         line = p.stdout.readline()
         if not line: break
@@ -466,16 +498,13 @@ class PingAgent(Thread):
         import platform
         if os.name == 'posix':
             p = subprocess.Popen("ping -t 1 -c 1 " +  self.host,
-                                shell = True,
-                                stdout=PIPE)
+                                shell = True, ** popen_args())
             m = re.search("ttl", str(p.stdout.read()))
             dprint("ping -t 1 -c 1 " +  self.host + "\n")
             p.wait()
         elif os.name == 'nt':
-            p = subprocess.Popen("ping -n 1 " + self.host,
-                                shell = True,
-                                stdout=PIPE,
-                                startupinfo = startupinfo)
+            p = subprocess.Popen("ping -n 1 -w 1000 " + self.host,
+                                shell = True, **popen_args())
             m = re.search("TTL", str(p.stdout.read()))
             dprint("ping -n 1" + self.host + "\n")
             p.wait()
@@ -777,7 +806,7 @@ class TeraTerm(Launcher):
                     '/user='+self.user,
                     '/passwd='+self.passwd]
         dprint("TeraTerm CMD: " + ' '.join(cmd_array) + "\n")
-        Popen(cmd_array, shell = True, startupinfo = startupinfo)
+        Popen(cmd_array, shell = True, **popen_args())
 
 #------------------------------------------------------------
 # Poderosa launcher
@@ -807,7 +836,7 @@ class Poderosa(Launcher):
         fd.close()
         cmd_str = "\"%s\" -open \"%s\"" % (self.cmd_path, self.gts_file)
         dprint("Poderosa CMD: " + cmd_str + "\n")
-        Popen(cmd_str, shell = True, startupinfo = startupinfo)
+        Popen(cmd_str, shell = True, **popen_args())
 
     def finalize(self):
         if self.gts_file:
@@ -824,7 +853,7 @@ class PuTTY(Launcher):
         cmd_str = "\"%s\" -ssh %s@%s:%s -pw \"%s\"" \
         % (self.cmd_path, self.user, self.host, self.port, self.passwd)
         dprint("Putty CMD: " + cmd_str + "\n")
-        Popen(cmd_str, shell = True, startupinfo = startupinfo)
+        Popen(cmd_str, shell = True,  **popen_args())
 
 #------------------------------------------------------------
 # Mac's generic Terminal App launcher
@@ -858,7 +887,7 @@ interact
         os.system("chmod 755 " + self.login_sh_file)
         # launch Terminal.app
         cmd = "/usr/bin/open -n -a " + self.cmd + " " + self.login_sh_file
-        Popen(cmd, shell = True)
+        Popen(cmd, shell = True,  **popen_args())
         dprint(cmd + "¥n")
 
     def finalize(self):
@@ -1186,7 +1215,8 @@ class App(ttk.Frame):
         row_data = (ip_addr, mac_addr, host_name)
         self.tree.insert('', 'end', values = row_data)
         for idx, val in enumerate(row_data):
-            iwidth = tkFont().measure(text = val)
+            tf = tkFont()
+            iwidth = tf.measure(text = val)
             if self.tree.column(self.dataCols[idx], 'width') < iwidth:
                 self.tree.column(self.dataCols[idx], width = iwidth)
 
@@ -1198,7 +1228,7 @@ class App(ttk.Frame):
 
     # cleanup treeview
     def clear_treeview(self):
-        map(self.tree.delete, self.tree.get_children())
+        self.tree.delete(*self.tree.get_children())
 
     # progress bar
     def advance_progress(self):
@@ -1293,6 +1323,11 @@ def sigint_handler(signum, stack):
     root.update()
     root.destroy()
 
+def resource_path(relative):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative)
+    return os.path.join(relative)
+
 def gui_main():
     global root
     import signal
@@ -1307,11 +1342,11 @@ def gui_main():
         pf = platform.system()
         dprint("Platform type is: " + pf)
         if pf == "Windows":
-            root.iconbitmap(bitmap = "icons/raspi.ico")
+            root.iconbitmap(bitmap = resource_path("icons/raspi.ico"))
         elif pf == "Darwin":
             pass # Mac OS X never appear titlebar icon
         else:
-            root.iconbitmap(bitmap = "icons/raspi.xbm")
+            root.iconbitmap(bitmap = resource_path("icons/raspi.xbm"))
         root.update()
         root.mainloop()
     except:
