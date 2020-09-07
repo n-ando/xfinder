@@ -15,6 +15,11 @@
 all:
 	make `uname`
 
+Linux:
+	pyinstaller xfinder.py --onefile --noconsole --icon=icons/raspi.icns
+#	mkdir -p bin
+#	cp dist/xfinder.app bin/
+
 Darwin:
 	pyinstaller xfinder.py --onefile --noconsole --icon=icons/raspi.icns
 	mkdir -p bin

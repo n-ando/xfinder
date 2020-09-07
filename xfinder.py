@@ -60,27 +60,39 @@
 #------------------------------------------------------------
 import sys
 import os
+import platform
 import re
 import time
 import subprocess
 from subprocess import Popen, PIPE
 from threading import Thread
 
-os.environ["TK_SILENCE_DEPRECATION"] = "1"
+# Max thread Pinger agent
 MAX_THREAD = 16
-DEBUG = True
-def dprint(msg):
-    if DEBUG:
-        sys.stderr.write(msg)
+# If enable debug print, set True
+DEBUG = False
 
-if os.name == 'nt':
+# Suppress Tkinter deprecation message
+os.environ["TK_SILENCE_DEPRECATION"] = "1"
+
+# Suppress opening command window on Windows
+if platform.system() == 'Windows':
     import subprocess
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startupinfo.wShowWindow = subprocess.SW_HIDE
-if sys.platform == "win32":
+
+    # Windows workaround for DLL loading order
+    # https://github.com/pyinstaller/pyinstaller/wiki/Recipe-subprocess
     import ctypes
     ctypes.windll.kernel32.SetDllDirectoryA(None)
+
+#------------------------------------------------------------
+# Debug print function
+#------------------------------------------------------------
+def dprint(msg):
+    if DEBUG:
+        sys.stderr.write(msg)
 
 
 #------------------------------------------------------------
@@ -119,16 +131,21 @@ def popen_args(include_stdout = True):
 # return: It returns IP address list of current host
 #------------------------------------------------------------
 def get_interfaces_win32():
-    p = Popen('ipconfig', shell = True, **popen_args())
-    addr_list = []
-    while True:
-        line  = p.stdout.readline()
-        if not line: break
-        m = re.search("IPv4", str(line))
-        if m:
-            m0 = re.search("(\d+\.){3}(\d+)", str(line))
-            if m0: addr_list.append(m0.group())
-    p.wait()
+    try:
+        p = Popen('ipconfig', shell = True, **popen_args())
+        addr_list = []
+        while True:
+            line  = p.stdout.readline()
+            if not line: break
+            m = re.search("IPv4", str(line))
+            if m:
+                m0 = re.search("(\d+\.){3}(\d+)", str(line))
+                if m0: addr_list.append(m0.group())
+        p.wait()
+    except:
+        print("Unexpected error in get_interfaces_win32():",
+                sys.exc_info()[0])
+    dprint("get_interfaces_win32() = " + ' '.join(addr_list) + "\n")
     return addr_list
 
 #------------------------------------------------------------
@@ -136,16 +153,20 @@ def get_interfaces_win32():
 # return: It returns IP address list of current host
 #------------------------------------------------------------
 def get_interfaces_unix():
-    p = Popen('LC_ALL=C ifconfig -a', shell = True, **popen_args())
-    addr_list = []
-    while True:
-        line  = p.stdout.readline()
-        if not line: break
-        dprint(str(line) + "\n")
-        m = re.search("inet ([0-9]{1,3}(\.[0-9]{1,3}){3})", str(line))
-        if m and m.group(1) != '127.0.0.1':
-            addr_list.append(m.group(1))
-    p.wait()
+    try:
+        p = Popen('LC_ALL=C ifconfig -a', shell = True, **popen_args())
+        addr_list = []
+        while True:
+            line  = p.stdout.readline()
+            if not line: break
+            dprint(str(line) + "\n")
+            m = re.search("inet ([0-9]{1,3}(\.[0-9]{1,3}){3})", str(line))
+            if m and m.group(1) != '127.0.0.1':
+                addr_list.append(m.group(1))
+        p.wait()
+    except:
+        print("Unexpected error in get_interfaces_macos():",
+            sys.exc_info()[0])
     dprint("get_interfaces_unix() = " + ' '.join(addr_list) + "\n")
     return addr_list
 
@@ -164,16 +185,14 @@ def get_interfaces_macos():
         while True:
             line  = p.stdout.readline()
             if not line: break
-            m = re.search("inet ", str(line[:-1]))
-            if not m: continue
-            if m:
-                m0 = re.match(".*inet ([0-9\.]*)", str(line))
-                if m0 and m0.group(1) != '127.0.0.1':
-                    addr_list.append(m0.group(1))
+            m = re.match("inet ([0-9]{1,3}(\.[0-9]{1,3}){3})", str(line))
+            if m and m.group(1) != '127.0.0.1':
+                addr_list.append(m0.group(1))
         p.wait()
     except:
         print("Unexpected error in get_interfaces_macos():",
             sys.exc_info()[0])
+    dprint("get_interfaces_macos() = " + ' '.join(addr_list) + "\n")
     return addr_list
 
 #------------------------------------------------------------
@@ -993,13 +1012,13 @@ class iTermApp(MacTermApp):
 
 TERM_TYPES = {
     "gnome-terminal": GnomeTerminal(),
-    "xterm": Xterm(),
-    "kterm": Kterm(),
-    "TeraTerm": TeraTerm(),
-    "Poderosa": Poderosa(),
-    "PuTTY"   : PuTTY(),
-    "Terminal.app": TerminalApp(),
-    "iTerm.app": iTermApp()
+    "xterm":          Xterm(),
+    "kterm":          Kterm(),
+    "TeraTerm":       TeraTerm(),
+    "Poderosa":       Poderosa(),
+    "PuTTY"   :       PuTTY(),
+    "Terminal.app":   TerminalApp(),
+    "iTerm.app":      iTermApp()
     }
 
 # end of Terminal Launcher
