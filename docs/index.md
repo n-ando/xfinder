@@ -19,11 +19,20 @@ xfinderは一つの実行ファイルでコマンドラインツール (CUI モ�
 ここでは、GUIモードのxfinderの使い方について説明します。
 
 <a id="anchor2"></a>
+## xfinderの動作条件
+
+xfinderは以下の環境で動作します。
+
+- Windows 10, Python3
+- Mac OS X, Python3
+
+
+<a id="anchor2"></a>
 ## xfinderのダウンロード
 
 xfinder 以下の場所からダウンロードできます。
 
-| ''xfinderバイナリ''(Windows) | [https://github.com/n-ando/xfinder/releases](https://github.com/n-ando/xfinder/releases) |
+| ''xfinderバイナリ'' | [https://github.com/n-ando/xfinder/releases](https://github.com/n-ando/xfinder/releases) |
 | ''xfinderソースコード''       | [https://github.com/n-ando/xfinder](https://github.com/n-ando/xfinder) |
 
 <div style="text-align: center;"><img src="xfinder_folder.png" width="600px"></div>
