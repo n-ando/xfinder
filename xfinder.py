@@ -67,8 +67,11 @@ from subprocess import Popen, PIPE
 from threading import Thread
 
 os.environ["TK_SILENCE_DEPRECATION"] = "1"
-
 MAX_THREAD = 16
+DEBUG = True
+def dprint(msg):
+    if DEBUG:
+        sys.stderr.write(msg)
 
 if os.name == 'nt':
     import subprocess
@@ -107,10 +110,6 @@ def popen_args(include_stdout = True):
                 'env': env })
     return ret
 
-DEBUG = False
-def dprint(msg):
-    if DEBUG:
-        sys.stderr.write(msg)
 
 #============================================================
 # Getting current network information (IP address)
@@ -137,17 +136,17 @@ def get_interfaces_win32():
 # return: It returns IP address list of current host
 #------------------------------------------------------------
 def get_interfaces_unix():
-    p = Popen('LC_ALL=C ifconfig -a', shell = True, **popen_args(False))
+    p = Popen('LC_ALL=C ifconfig -a', shell = True, **popen_args())
     addr_list = []
     while True:
         line  = p.stdout.readline()
         if not line: break
-        m = re.search("inet addr", str(line))
-        if m:
-            m0 = re.match(".*inet addr:([0-9\.]*)", str(line))
-            if m0 and m0.group(1) != '127.0.0.1':
-                addr_list.append(m0.group(1))
+        dprint(str(line) + "\n")
+        m = re.search("inet ([0-9]{1,3}(\.[0-9]{1,3}){3})", str(line))
+        if m and m.group(1) != '127.0.0.1':
+            addr_list.append(m.group(1))
     p.wait()
+    dprint("get_interfaces_unix() = " + ' '.join(addr_list) + "\n")
     return addr_list
 
 #------------------------------------------------------------
@@ -232,8 +231,20 @@ def get_netinfo_win32(ip_addr):
 #    "if_gw"  : Gateway of the interface
 #------------------------------------------------------------
 def get_netinfo_unix(ip_addr):
-    print("Not implemented")
-    return {}
+    p = Popen('LC_ALL=C ifconfig -a', shell = True, **popen_args())
+    r = {}
+    r["if_addr"] = ip_addr
+    while True:
+        line  = p.stdout.readline()
+        if not line: break
+        m = re.search(ip_addr, str(line))
+        if m:
+            m0 = re.search("netmask ([0-9]{1,3}(\.[0-9]{1,3}){3})", str(line))
+            if m0:
+                r["if_mask"] = m0.group(1)
+                dprint("mask: " + m0.group(1) + "\n")
+    p.wait()
+    return r
 
 #------------------------------------------------------------
 # get_netinfo_macos(ip_addr)
@@ -494,15 +505,20 @@ class PingAgent(Thread):
         PingAgent.verbose = vvv
 
     def run(self):
-        import os
         import platform
-        if os.name == 'posix':
+        if platform.system() == 'Linux':
+            p = subprocess.Popen("ping -t 1 -w 1 " +  self.host,
+                                shell = True, ** popen_args())
+            m = re.search("ttl", str(p.stdout.read()))
+            dprint("ping -t 1 -w 1 " +  self.host + "\n")
+            p.wait()
+        elif platform.system() == 'Darwin':
             p = subprocess.Popen("ping -t 1 -c 1 " +  self.host,
                                 shell = True, ** popen_args())
             m = re.search("ttl", str(p.stdout.read()))
             dprint("ping -t 1 -c 1 " +  self.host + "\n")
             p.wait()
-        elif os.name == 'nt':
+        elif platform.system() == 'Windows':
             p = subprocess.Popen("ping -n 1 -w 1000 " + self.host,
                                 shell = True, **popen_args())
             m = re.search("TTL", str(p.stdout.read()))
@@ -759,7 +775,7 @@ class Launcher:
         elif platform.system() == 'Darwin':
             bin_path = self.macos_bin
         elif platform.system() == 'Linux':
-            bin_path = self.posix
+            bin_path = self.unix_bin
         else: # other OS
             sys.stderr.write("Unsupported OS\n")
         dprint("bin_path: " + ' '.join(bin_path) + '¥n')
@@ -807,6 +823,73 @@ class TeraTerm(Launcher):
                     '/passwd='+self.passwd]
         dprint("TeraTerm CMD: " + ' '.join(cmd_array) + "\n")
         Popen(cmd_array, shell = True, **popen_args())
+
+#------------------------------------------------------------
+# Linux's generic Terminal App launcher
+#------------------------------------------------------------
+class LinuxTerminal(Launcher):
+    def __init__(self, cmd = "xterm", options = "", appdir = "", path = None):
+        Launcher.__init__(self, cmd, appdir, path)
+        self.login_sh_file = None
+        self.options = options
+
+    def invoke_cmd(self):
+        # expect script for Terminal.app
+        if os.path.exists("/usr/bin/expect"):
+            login_sh = """#!/usr/bin/expect
+spawn ssh -p %s %s@%s
+match_max 100000
+expect "*?assword:*"
+send -- "%s\r"
+send -- "\r"
+interact
+""" % (self.port, self.user, self.host, self.passwd)
+        else:
+            login_sh = """#!/bin/bash
+
+echo "'expect' command not found"
+echo "To omit the password input, install expect command."
+echo "Ubuntu/Debian: apt install expect"
+echo ""
+echo "Plase input password: %s"
+ssh -p %s %s@%s
+""" % (self.passwd, self.port, self.user, self.host)
+
+        dprint("login shell script for " + self.cmd + "\n")
+        dprint(login_sh + "\n")
+
+        # creating login script on TEMP dir
+        temp_dir = os.environ.get("TEMP")
+        if temp_dir == None: temp_dir = "/tmp"
+        self.login_sh_file = temp_dir + "/login_" + self.host + ".sh"
+        fd = open(self.login_sh_file, "w")
+        fd.write(login_sh)
+        fd.close()
+        dprint("Login script created: " + self.login_sh_file + "\n")
+        os.system("chmod 755 " + self.login_sh_file)
+        # launch Terminal.app
+        cmd = self.cmd + " " + self.options + " " + self.login_sh_file
+        Popen(cmd, shell = True,  **popen_args())
+        dprint(cmd + "¥n")
+
+    def finalize(self):
+        if self.login_sh_file:
+            os.remove(self.login_sh_file)
+
+#------------------------------------------------------------
+# Gnome terminal launcher
+#------------------------------------------------------------
+class GnomeTerminal(LinuxTerminal):
+    def __init__(self, cmd = "gnome-terminal", options = "--", appdir = "", path = None):
+        LinuxTerminal.__init__(self, cmd, options, appdir, path)
+
+class Xterm(LinuxTerminal):
+    def __init__(self, cmd = "xterm", options = "-e", appdir = "", path = None):
+        LinuxTerminal.__init__(self, cmd, options, appdir, path)
+
+class Kterm(LinuxTerminal):
+    def __init__(self, cmd = "kterm", options = "-e", appdir = "", path = None):
+        LinuxTerminal.__init__(self, cmd, options, appdir, path)
 
 #------------------------------------------------------------
 # Poderosa launcher
@@ -909,6 +992,9 @@ class iTermApp(MacTermApp):
         MacTermApp.__init__(self, cmd, appdir, path)
 
 TERM_TYPES = {
+    "gnome-terminal": GnomeTerminal(),
+    "xterm": Xterm(),
+    "kterm": Kterm(),
     "TeraTerm": TeraTerm(),
     "Poderosa": Poderosa(),
     "PuTTY"   : PuTTY(),
@@ -1346,7 +1432,8 @@ def gui_main():
         elif pf == "Darwin":
             pass # Mac OS X never appear titlebar icon
         else:
-            root.iconbitmap(bitmap = resource_path("icons/raspi.xbm"))
+            pass
+#            root.iconbitmap(bitmap = resource_path("icons/raspi.png"))
         root.update()
         root.mainloop()
     except:
