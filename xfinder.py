@@ -159,15 +159,15 @@ def get_interfaces_unix():
         while True:
             line  = p.stdout.readline()
             if not line: break
-            dprint(str(line) + "\n")
             m = re.search("inet ([0-9]{1,3}(\.[0-9]{1,3}){3})", str(line))
             if m and m.group(1) != '127.0.0.1':
+                dprint(m.group(1) + '\n')
                 addr_list.append(m.group(1))
         p.wait()
     except:
-        print("Unexpected error in get_interfaces_macos():",
-            sys.exc_info()[0])
-    dprint("get_interfaces_unix() = " + ' '.join(addr_list) + "\n")
+        print("Unexpected error in get_interfaces_unix():",
+                sys.exc_info()[0])
+    dprint("get_interfaces_unix() = " + ' '.join(addr_list) + '\n')
     return addr_list
 
 #------------------------------------------------------------
@@ -176,23 +176,20 @@ def get_interfaces_unix():
 #------------------------------------------------------------
 def get_interfaces_macos():
     try:
-        p = subprocess.Popen(['ifconfig', '-a'],
-            env = dict(os.environ, LC_ALL="C"),
-            encoding = 'UTF-8',
-            close_fds = True,
-            stdout = subprocess.PIPE)
+        p = Popen("LC_ALL='C' ifconfig -a", shell = True, **popen_args())
         addr_list = []
         while True:
             line  = p.stdout.readline()
             if not line: break
-            m = re.match("inet ([0-9]{1,3}(\.[0-9]{1,3}){3})", str(line))
+            m = re.search("inet ([0-9]{1,3}(\.[0-9]{1,3}){3})", str(line))
             if m and m.group(1) != '127.0.0.1':
-                addr_list.append(m0.group(1))
+                dprint(m.group(1) + '\n')
+                addr_list.append(m.group(1))
         p.wait()
     except:
         print("Unexpected error in get_interfaces_macos():",
-            sys.exc_info()[0])
-    dprint("get_interfaces_macos() = " + ' '.join(addr_list) + "\n")
+                sys.exc_info()[0])
+    dprint("get_interfaces_macos() = " + ' '.join(addr_list) + '\n')
     return addr_list
 
 #------------------------------------------------------------
@@ -202,15 +199,16 @@ def get_interfaces_macos():
 def get_interfaces():
     import os
     import platform
-    if os.name == 'posix':
-        if platform.system() == "Darwin":
-            return get_interfaces_macos()
-        else:
-            return get_interfaces_unix()
-    elif os.name == 'nt':
+    if platform.system() == "Linux":
+        return get_interfaces_unix()
+    elif platform.system() == "Darwin":
+        return get_interfaces_macos()
+    elif platform.system() == "Windows":
         return get_interfaces_win32()
     else:
         print("Unsupported OS")
+        return get_interfaces_unix()
+
 #------------------------------------------------------------
 
 #============================================================
@@ -737,14 +735,9 @@ def cui_main():
 
 #============================================================
 # GUI application
-try:
-    import ttk as ttk  # Python27
-    import Tkinter as Tk
-    import tkFont
-except ImportError:
-    import tkinter.ttk as ttk  # Python31+
-    import tkinter as Tk
-    from tkinter.font import Font as tkFont
+import tkinter.ttk as ttk  # Python31+
+import tkinter as Tk
+from tkinter.font import Font as tkFont
 
 class AsyncInvoker(Thread):
     def __init__(self, func):
@@ -788,7 +781,7 @@ class Launcher:
 
     def check_availability(self):
         import platform
-        dprint("check_availability => system(): " + platform.system() + "¥n")
+        dprint("check_availability => system(): " + platform.system() + '\n')
         if   platform.system() == 'Windows':
             bin_path = self.win_bin
         elif platform.system() == 'Darwin':
@@ -797,7 +790,7 @@ class Launcher:
             bin_path = self.unix_bin
         else: # other OS
             sys.stderr.write("Unsupported OS\n")
-        dprint("bin_path: " + ' '.join(bin_path) + '¥n')
+        dprint("bin_path: " + '\n'.join(bin_path) + '\n')
         for p in bin_path:
             path = p + '/' + self.appdir + '/' + self.cmd
             if os.path.exists(path):
@@ -889,7 +882,7 @@ ssh -p %s %s@%s
         # launch Terminal.app
         cmd = self.cmd + " " + self.options + " " + self.login_sh_file
         Popen(cmd, shell = True,  **popen_args())
-        dprint(cmd + "¥n")
+        dprint(cmd + '\n')
 
     def finalize(self):
         if self.login_sh_file:
@@ -990,7 +983,7 @@ interact
         # launch Terminal.app
         cmd = "/usr/bin/open -n -a " + self.cmd + " " + self.login_sh_file
         Popen(cmd, shell = True,  **popen_args())
-        dprint(cmd + "¥n")
+        dprint(cmd + '\n')
 
     def finalize(self):
         if self.login_sh_file:
@@ -1320,7 +1313,7 @@ class App(ttk.Frame):
         row_data = (ip_addr, mac_addr, host_name)
         self.tree.insert('', 'end', values = row_data)
         for idx, val in enumerate(row_data):
-            tf = tkFont()
+            tf = tkFont(root)
             iwidth = tf.measure(text = val)
             if self.tree.column(self.dataCols[idx], 'width') < iwidth:
                 self.tree.column(self.dataCols[idx], width = iwidth)
