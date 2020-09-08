@@ -17,8 +17,8 @@ all:
 
 Linux:
 	pyinstaller xfinder.py --onefile --noconsole --icon=icons/raspi.icns
-#	mkdir -p bin
-#	cp dist/xfinder.app bin/
+	mkdir -p bin
+	cp dist/xfinder bin/
 
 Darwin:
 	pyinstaller xfinder.py --onefile --noconsole --icon=icons/raspi.icns

@@ -1439,13 +1439,15 @@ def gui_main():
         import platform
         pf = platform.system()
         dprint("Platform type is: " + pf)
+        if pf == "Linux":
+            root.iconphoto(True, Tk.PhotoImage(file='icons/raspi.png'))
         if pf == "Windows":
             root.iconbitmap(bitmap = resource_path("icons/raspi.ico"))
         elif pf == "Darwin":
             pass # Mac OS X never appear titlebar icon
         else:
-            pass
-#            root.iconbitmap(bitmap = resource_path("icons/raspi.png"))
+            root.iconphoto(True,
+                Tk.PhotoImage(file='icons/raspi.png'))
         root.update()
         root.mainloop()
     except:
