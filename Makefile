@@ -23,7 +23,7 @@ Linux:
 Darwin:
 	pyinstaller xfinder.py --onefile --noconsole --icon=icons/raspi.icns
 	mkdir -p bin
-	cp dist/xfinder.app bin/
+	cp -r dist/xfinder.app bin/
 
 clean:
 	rm -f *~
