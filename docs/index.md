@@ -23,9 +23,12 @@ xfinderは一つの実行ファイルでコマンドラインツール (CUI モ�
 
 xfinderは以下の環境で動作します。
 
-- Windows 10, Python3
-- Mac OS X, Python3
+| OS          | Python    | Terminal ソフトウェア |
+| Windows 10  | Python3   | Tera Term, PuTTY, Poderosa |
+| MacOS X     | Python3   | Terminal.app, iTerm.app |
+| Linux (Ubuntu18.04,20.04で動作確認) | Python3 | gnome-terminal, xterm, kterm |
 
+なお、単一バイナリ形式 (WindowsのEXE, MacOSのapp、Linuxの単一事項ファイル）ではPython3のインストールは不要です。
 
 <a id="anchor2"></a>
 ## xfinderのダウンロード
@@ -33,6 +36,9 @@ xfinderは以下の環境で動作します。
 xfinder 以下の場所からダウンロードできます。
 
 | ''xfinderバイナリ'' | [https://github.com/n-ando/xfinder/releases](https://github.com/n-ando/xfinder/releases) |
+| ''Windows''       | [https://github.com/n-ando/xfinder/releases/download/1.1/xfinder.exe](https://github.com/n-ando/xfinder/releases/download/1.1/xfinder.exe)]
+| ''MacOS X''       | [https://github.com/n-ando/xfinder/releases/download/1.1/xfinder_v1.1.dmg](https://github.com/n-ando/xfinder/releases/download/1.1/xfinder_v1.1.dmg)|
+| ''Linux'' (Ubuntu18.04, 20.04で動作確認) | [https://github.com/n-ando/xfinder/releases/download/1.1/xfinder](https://github.com/n-ando/xfinder/releases/download/1.1/xfinder)|
 | ''xfinderソースコード''       | [https://github.com/n-ando/xfinder](https://github.com/n-ando/xfinder) |
 
 <div style="text-align: center;"><img src="xfinder_folder.png" width="600px"></div>
