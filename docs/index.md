@@ -140,7 +140,7 @@ CENTER: ''スキャンするMACアドレスのパターンを指定する''
 
 - ''User name'': ログイン時に使用するユーザ名を入力します。左上の''Scan setting'' の ''Board type'' 設定によって自動的に値が入力されます。
 - ''Password'': ログイン時に使用するパスワードを入力します。左上の''Scan setting'' の ''Board type'' 設定によって自動的に値が入力されます。
-- ''Port'': ログイン時に使用するポート番号を入力します。デフォルトではsshのデフォルトポート番号20が設定されています。
+- ''Port'': ログイン時に使用するポート番号を入力します。デフォルトではsshのデフォルトポート番号22が設定されています。
 - ''Terminal App'': 使用するターミナルアプリケーションがコンボボックスから選択で来ます。利用可能なターミナルアプリケーションはWindowsでは ''TeraTerm'', ''Poderosa'', ''PuTTY'' のいずれかで、起動時にこれらがインストールされているかチェックし、利用可能なものだけリストに表示されます。
 - ''Login''ボタン: 右側のFound nodesでログインするノード選択すると押下可能になります。このボタンを押すと、上の設定に従ってターミナルアプリケーションが起動されRaspberryPiにログインできます。
 
@@ -156,3 +156,31 @@ CENTER: ''スキャンするMACアドレスのパターンを指定する''
 <div style="text-align: center;"><img src="launch_teraterm.png" width="600px"></div>
 <div style="text-align: center;"><b>起動したターミナルアプリケーション (TeraTerm Pro)</b></div>
 
+### Terminalの利用
+
+TerminalペインのTerminalプルダウンには、インストールされているTerminalソフトウェアを自動的に判別して表示します。
+したがって、Terminalソフトウェアを使ってRaspberryPi などにログインしたい場合は、必要なTerminalソフトウェアをインストールしてください。
+利用可能なTerminalソフトウェアは、以下の表に示すとおりOSごとに決まっています。もし、追加してほしいTerminalソフトウェアがある場合は、GitHubのissueで要望してください。
+
+| OS          | Python    | Terminal ソフトウェア |
+| Windows 10  | Python3   | Tera Term, PuTTY, Poderosa |
+| MacOS X     | Python3   | Terminal.app, iTerm.app |
+| Linux (Ubuntu18.04,20.04で動作確認) | Python3 | gnome-terminal, xterm, kterm |
+
+#### Terminal ソフトウェアの入手先
+
+- Windows
+  - Tera Term Pro: https://ja.osdn.net/projects/ttssh2/
+  - PuTTY: https://www.putty.org/
+  - Poderosa: https://ja.poderosa-terminal.com/
+- MacOS X
+  - Terminal: MacOS Xにデフォルトでインストールされているソフトウェア
+  - iTerm: https://iterm2.com/
+    - Home Brew が入っている場合は brew cask install iterm2 でインストール可能
+- Linux
+  - gnome-terminal: Ubuntu Linuxなどではデフォルトでインストールされています
+  - xterm: deb系: apt install xterm, rpm系: yum install xterm でインストール可能です
+  - kterm: deb系: apt install kterm, rpm系: yum install kterm でインストール可能です
+
+利用可能なTerminalソフトウェアは、以下の表に示すとおりOSごとに決まっています。もし、追加してほしいTerminalソフトウェアがある場合は、GitHubのissueで要望してください。ソフトウェア
+利用可能なTerminalソフトウェアは、以下の表に示すとおりOSごとに決まっています。もし、追加してほしいTerminalソフトウェアがある場合は、GitHubのissueで要望してください。
