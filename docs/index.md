@@ -179,8 +179,12 @@ TerminalペインのTerminalプルダウンには、インストールされて�
     - Home Brew が入っている場合は brew cask install iterm2 でインストール可能
 - Linux
   - gnome-terminal: Ubuntu Linuxなどではデフォルトでインストールされています
-  - xterm: deb系: apt install xterm, rpm系: yum install xterm でインストール可能です
-  - kterm: deb系: apt install kterm, rpm系: yum install kterm でインストール可能です
+  - xterm: 以下のコマンドでインストール可能です
+    - deb系 (Debian, Ubuntu等）: apt install xterm
+    - rpm系 (RedHat, CentOS等）: yum install xterm
+  - kterm: 以下のコマンドでインストール可能です
+    - deb系 (Debian, Ubuntu等）: apt install kterm
+    - rpm系 (RedHat, CentOS等）: yum install kterm
 
 利用可能なTerminalソフトウェアは、以下の表に示すとおりOSごとに決まっています。もし、追加してほしいTerminalソフトウェアがある場合は、GitHubのissueで要望してください。ソフトウェア
 利用可能なTerminalソフトウェアは、以下の表に示すとおりOSごとに決まっています。もし、追加してほしいTerminalソフトウェアがある場合は、GitHubのissueで要望してください。
